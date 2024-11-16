@@ -1,0 +1,10 @@
+CREATE DATABASE taam COLLATE Latin1_General_100_CI_AS;
+GO
+USE taam;
+GO
+CREATE LOGIN taamAdmin WITH PASSWORD='T@@mAdm1n';
+GO
+CREATE USER taamAdmin FOR LOGIN taamAdmin;
+GO
+ALTER ROLE db_owner ADD MEMBER taamAdmin;
+GO

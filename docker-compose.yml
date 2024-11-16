@@ -1,0 +1,92 @@
+version: "3.8"
+services:
+  sqlserver:
+    container_name: sqlserver
+    image: mcr.microsoft.com/mssql/server:2017-latest
+    restart: always
+    ports:
+      - "1433:1433"
+    environment:
+      - ACCEPT_EULA=Y
+      - MSSQL_SA_PASSWORD=T@@mAdm1n
+      - MSSQL_PID=Developer
+      - MSSQL_DATA_DIR=/var/opt/mssql/data
+      - MSSQL_LOG_DIR=/var/opt/mssql/log
+      - MSSQL_BACKUP_DIR=/var/opt/mssql/backup
+      #When we replace the path /var/opt/ by /home/ we don't have anymore the issue ERROR: Setup FAILED copying system data file 'C:\templatedata\master.mdf' to '/var/opt/mssql/data/master.mdf':  5(Access is denied.)
+    volumes:
+      - ./mssql-data/data:/var/opt/mssql/data
+      - ./mssql-data/log:/var/opt/mssql/log
+      - ./mssql-data/secrets:/var/opt/mssql/secrets
+    networks:
+      taam-network:
+  mssql-tools:
+    image: mcr.microsoft.com/mssql-tools:latest
+    restart: no
+    command: "/opt/mssql-tools/bin/sqlcmd -S sqlserver -l 60 -U sa -P T@@mAdm1n -d master -i /docker-entrypoint-initdb.d/init.sql"
+    depends_on:
+      - sqlserver
+    volumes:
+      - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      taam-network:
+  keycloak:
+    image: quay.io/keycloak/keycloak:23.0.2
+    environment:
+      KC_DB: mssql
+      KC_DB_URL: jdbc:sqlserver://sqlserver:1433;databaseName=master;encrypt=true;trustServerCertificate=true
+      KC_DB_USERNAME: sa
+      KC_DB_PASSWORD: T@@mAdm1n
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_TRANSACTION_XA_ENABLED: false
+    volumes:
+      - ./keycloak:/opt/keycloak/data/import
+    ports:
+      - "8085:8085"
+    command: [ "start-dev", "--http-port=8085", "--import-realm"]
+    depends_on:
+      - sqlserver
+    networks:
+      taam-network:
+  smtp4dev:
+    image: rnwood/smtp4dev
+    restart: always
+    ports:
+      - '5000:80'
+      - '25:25'
+      - '143:143'
+    volumes:
+      - ./smtp4dev-data:/smtp4dev
+  taam-api-build:
+    container_name: taam-api-build
+    build:
+      context: ./
+      dockerfile: Dockerfile-build
+      args:
+        build_env: docker
+    profiles:
+      - build-api
+      - run-api
+    volumes:
+      - ./target:/app/target
+    command: cp /taam-0.0.1-SNAPSHOT.jar /app/target/
+  taam-api:
+    container_name: taam-api
+    build:
+      context: ./
+      dockerfile: Dockerfile
+      args:
+        build_env: docker
+    ports:
+      - "8080:8080"
+    depends_on:
+      - sqlserver
+      - keycloak
+    profiles:
+      - run-api
+    restart: on-failure
+    networks:
+      taam-network:
+networks:
+  taam-network:

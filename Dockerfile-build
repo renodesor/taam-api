@@ -1,0 +1,15 @@
+FROM openjdk:21-slim AS build
+ARG build_env
+ENV spring.profiles.active=$build_env
+WRKDIR /app
+COPY mvnw .
+COPY .mvn .mvn
+COPY pom.xml .
+COPY src src
+COPY sql sql
+RUN chmod +x ./mvnw
+RUN apt-get update && apt-get install dos2unix
+RUN dos2unix mvnw
+RUN ./mvnw install -DskipTests
+FROM busybox AS export
+COPY --from=build /app/target/taam-api-0.0.1-SNAPSHOT.jar /taam-api-0.0.1-SNAPSHOT.jar
