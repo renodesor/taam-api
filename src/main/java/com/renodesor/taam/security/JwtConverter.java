@@ -4,7 +4,6 @@ import com.renodesor.taam.entity.TaamUser;
 import com.renodesor.taam.repository.TaamUserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
@@ -51,14 +50,12 @@ public class JwtConverter implements Converter<Jwt, AbstractAuthenticationToken>
         if (taamUserLocal == null) {
             log.info("Adding new user after successful login: {}", source.getClaims());
             taamUserLocal = new TaamUser();
-            //setTaamUserDetails(taamUserLocal, source);
-            //setTaamUserDetails(this.taamUser, source);
-            //canSave = true;
+            setTaamUserDetails(taamUserLocal, source);
+            setTaamUserDetails(this.taamUser, source);
 
-        } //else {
-            canSave = updateTaamUserDetail(source, taamUserLocal);
-            updateTaamUserDetail(source, taamUser);
-        //}
+        }
+        canSave = updateTaamUserDetail(source, taamUserLocal);
+        updateTaamUserDetail(source, taamUser);
 
         if (canSave) taamUserRepository.save(taamUserLocal);
         return new JwtAuthenticationToken(source, Stream.concat(new JwtGrantedAuthoritiesConverter().convert(source)
@@ -100,14 +97,14 @@ public class JwtConverter implements Converter<Jwt, AbstractAuthenticationToken>
             return canSave;
         }
 
-        /*private void setTaamUserDetails(TaamUser taamUser, Jwt source) {
+        private void setTaamUserDetails(TaamUser taamUser, Jwt source) {
             taamUser.setId(UUID.fromString(source.getClaim(SUB)));
-            //taamUser.setFirstName(source.getClaim(GIVEN_NAME));
-            //taamUser.setLastName(source.getClaim(FAMILY_NAME));
+            taamUser.setFirstName(source.getClaim(GIVEN_NAME));
+            taamUser.setLastName(source.getClaim(FAMILY_NAME));
             taamUser.setEmail(source.getClaim(EMAIL));
-            //taamUser.setUsername(source.getClaim(USERNAME));
+            taamUser.setUsername(source.getClaim(USERNAME));
             taamUser.setCreatedBy(source.getClaim(USERNAME));
             taamUser.setCreatedOn( LocalDateTime.now());
-        }*/
+        }
 
 }
