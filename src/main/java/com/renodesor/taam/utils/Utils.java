@@ -5,7 +5,6 @@ import com.google.gson.GsonBuilder;
 import com.renodesor.taam.entity.BasicEntity;
 import com.renodesor.taam.entity.TaamUser;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import java.lang.reflect.Field;
 import java.time.LocalDateTime;
@@ -14,13 +13,14 @@ import java.util.*;
 @Slf4j
 public class Utils {
 
+    private Utils() {}
     public static final Gson gson = new GsonBuilder()
             .registerTypeAdapter(LocalDateTime.class, new LocalDateTimeAdapter())
             .create();
 
     public static Map convertObjectToMap(Object object) throws IllegalAccessException {
         Map<String, Object> objectInMap = new HashMap();
-        List<Field> fields = getAllFields(object.getClass()); //object.getClass().getDeclaredFields();
+        List<Field> fields = getAllFields(object.getClass());
 
         for (Field field : fields) {
             field.setAccessible(true); // Make private fields accessible
