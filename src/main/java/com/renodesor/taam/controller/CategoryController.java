@@ -8,7 +8,6 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -29,6 +28,7 @@ public class CategoryController {
 
     private final CategoryRepository categoryRepository;
     private final TaamUser taamUser;
+    private static final String UNEXPECTED_ERROR = "Unexpected error - {} ";
 
     @Operation(summary = "Get all Categories REST API", description = "Get all Categories REST API is used to get all categories in the database")
     @ApiResponse(responseCode = "200", description = "HTTP Status 200 SUCCES")
@@ -41,6 +41,7 @@ public class CategoryController {
             }
             return ResponseEntity.ok(categories);
         } catch (Exception ex) {
+            log.error(UNEXPECTED_ERROR, ex.getMessage());
             return ResponseEntity.internalServerError().build();
         }
     }
@@ -56,6 +57,7 @@ public class CategoryController {
             }
             return ResponseEntity.ok(categoryRepository.findById(id).orElseThrow());
         } catch (Exception ex) {
+            log.error(UNEXPECTED_ERROR, ex.getMessage());
             return ResponseEntity.internalServerError().build();
         }
     }
@@ -82,7 +84,7 @@ public class CategoryController {
             return new ResponseEntity<>(HttpStatus.CONFLICT);
         }
         catch(Exception ex) {
-            log.error("Error while trying to insert new category");
+            log.error(UNEXPECTED_ERROR, ex.getMessage());
             return ResponseEntity.internalServerError().build();
         }
     }
@@ -102,14 +104,20 @@ public class CategoryController {
     public ResponseEntity<Category> putCategory(@RequestBody Category category) {
         try {
             HttpStatus status;
-            if(categoryRepository.findById(category.getId()).isPresent()) {
-                Utils.setAuditInfo(category, "UPDATE", taamUser);
+            Optional<Category> existingCategory = categoryRepository.findById(category.getId());
+            Category categoryToPersist;
+            if(existingCategory.isPresent()) {
+                categoryToPersist = existingCategory.get();
+                categoryToPersist.setName(category.getName());
+                categoryToPersist.setDescription(category.getDescription());
+                Utils.setAuditInfo(categoryToPersist, "UPDATE", taamUser);
                 status = HttpStatus.OK;
             } else {
-                Utils.setAuditInfo(category, "CREATE", taamUser);
+                categoryToPersist = category;
+                Utils.setAuditInfo(categoryToPersist, "CREATE", taamUser);
                 status = HttpStatus.CREATED;
             }
-            Category createdCategory = categoryRepository.save(category);
+            Category createdCategory = categoryRepository.save(categoryToPersist);
             return new ResponseEntity<>(createdCategory, status);
         }
         catch(DataIntegrityViolationException ex) {
@@ -117,6 +125,7 @@ public class CategoryController {
             return new ResponseEntity<>(HttpStatus.CONFLICT);
         }
         catch(Exception ex) {
+            log.error(UNEXPECTED_ERROR, ex.getMessage());
             return ResponseEntity.internalServerError().build();
         }
     }
@@ -149,6 +158,7 @@ public class CategoryController {
             return new ResponseEntity<>(HttpStatus.CONFLICT);
         }
         catch(Exception ex) {
+            log.error(UNEXPECTED_ERROR, ex.getMessage());
             return ResponseEntity.internalServerError().build();
         }
     }
@@ -165,6 +175,7 @@ public class CategoryController {
             categoryRepository.deleteById(id);
             return ResponseEntity.noContent().build();
         } catch (Exception ex) {
+            log.error(UNEXPECTED_ERROR, ex.getMessage());
             return ResponseEntity.internalServerError().build();
         }
     }
